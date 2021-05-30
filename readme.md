@@ -1,2 +1,2 @@
-# the favorites
-+ some codes that i favorate
+# some-codes
++ some codes that I prefer
