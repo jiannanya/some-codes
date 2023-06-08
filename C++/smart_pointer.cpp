@@ -390,3 +390,28 @@ inline SharedPtr<T> MakeShared(Args&&... args) {
   return SharedPtr<T>(new T(std::forward<Args>(args)...));
 }
 
+// enable_share_frome_this
+// https://stackoverflow.com/questions/34061515/how-stdenable-shared-from-thisshared-from-this-works
+template<typename T>
+class EnableSharedFromThis
+{
+    mutable WeakPtr<T> data;
+
+protected:
+
+    EnableSharedFromThis() noexcept {}
+    EnableSharedFromThis(EnableSharedFromThis const&) noexcept {}
+    EnableSharedFromThis& operator=(EnableSharedFromThis const&) noexcept{return *this;}
+    ~EnableSharedFromThis() {}
+
+public:
+
+    SharedPtr<T> shared_from_this(){return SharedPtr<T>(data);}
+    SharedPtr<T const> shared_from_this() const{return SharedPtr<const T>(data);}
+
+    WeakPtr<T> weak_from_this() noexcept{ return data; }
+    WeakPtr<const T> weak_from_this() const noexcept{ return data; }
+
+    template <typename U> friend class SharedPtr;
+};
+
