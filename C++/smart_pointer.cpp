@@ -176,9 +176,10 @@ protected:
   }
 };
 
+template<typename T>class EnableSharedFromThis;
 template<typename T> class WeakPtr;
 
-// shared ptr，这里省略了enable_share_from_this
+// share ptr
 template<typename T>
 class SharedPtr : public PtrBase {
   using pointer = T*;
@@ -206,6 +207,13 @@ private:
       increase_shared_count();
   }
 
+  void enable_weak_this() noexcept{
+      if(std::is_convertible_v<T*,EnableSharedFromThis<T>*>){
+            auto e = dynamic_cast<EnableSharedFromThis<T>*>(data);
+            e->data = new WeakPtr<T>(data);
+      }
+  }
+
 public:
   // 用于外部获取指针原始类型
   typedef T ElementType;
@@ -223,7 +231,10 @@ public:
       }
       if (data != nullptr) {
           increase_shared_count();
+          enable_weak_this();
       }
+
+
   }
 
   ~SharedPtr() noexcept {
@@ -234,11 +245,12 @@ public:
   SharedPtr(const SharedPtr& copy) noexcept : data(copy.data), PtrBase(copy.counter, copy.mutex) {
       if (data != nullptr) {
           increase_shared_count();
+          enable_weak_this();
       }
   }
   // 拷贝赋值, 采用copy-swap写法
-  SharedPtr& operator=(const SharedPtr copy) noexcept {
-      //SharedPtr tmp(copy);
+  SharedPtr& operator=(const SharedPtr& copy) noexcept {
+      SharedPtr tmp(copy);
       swap(copy);
       return *this;
   }
@@ -253,12 +265,14 @@ public:
   SharedPtr(SharedPtr&& moving) noexcept : data(nullptr), PtrBase() {
       swap(moving);
       _destroy(moving);
+      enable_weak_this();
   }
   // 移动赋值函数
   SharedPtr& operator=(SharedPtr&& moving) noexcept {
       if (this != &moving) {
           swap(moving);
           _destroy(moving);
+          enable_weak_this();
       }
       return *this;
   }
@@ -272,16 +286,19 @@ public:
   void swap(SharedPtr& other) noexcept {
       std::swap(data, other.data);
       PtrBase::swap(other);
+      enable_weak_this();
   }
 
   void swap(SharedPtr&& other) noexcept {
       std::swap(data, other.data);
       PtrBase::swap(other);
+      enable_weak_this();
   }
 
   // 通过与新构造的对象交换来简化代码
   void reset(pointer p = nullptr) noexcept {
       swap(SharedPtr(p));
+      enable_weak_this();
   }
 
   // 返回当前计数器次数
